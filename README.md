@@ -200,7 +200,7 @@ of Use).
 
 ## Credits
 
-Created by **Victor Medeiros**, Mid-level IT Analyst & AI Full-Stack Engineer.
+Created by **Victor Medeiros**, AI Engineer and Full Stack Software Engineer.
 
 ## License
 

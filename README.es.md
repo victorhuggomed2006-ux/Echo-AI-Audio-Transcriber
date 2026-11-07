@@ -204,7 +204,7 @@ Gemma (Gemma Terms of Use).
 
 ## Créditos
 
-Creado por **Victor Medeiros**, Mid-level IT Analyst & AI Full-Stack Engineer.
+Creado por **Victor Medeiros**, AI Engineer and Full Stack Software Engineer.
 
 ## Licencia
 

@@ -201,7 +201,7 @@ Use).
 
 ## Créditos
 
-Criado por **Victor Medeiros**, Mid-level IT Analyst & AI Full-Stack Engineer.
+Criado por **Victor Medeiros**, AI Engineer and Full Stack Software Engineer.
 
 ## Licença
 
