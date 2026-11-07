@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+
+Security update. No changes to features.
+
+- Rebuilt the installers with updated libraries that fix known vulnerabilities (certifi, filelock, gitpython, opentelemetry-api, setuptools).
+- The dependency audit (`pip-audit`) now passes in CI.
+
 ## 1.0.0
 
 The first public release of Echo-AI (Echo AI Audio Transcriber).

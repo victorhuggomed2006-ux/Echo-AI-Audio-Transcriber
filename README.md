@@ -51,7 +51,7 @@ Echo-AI.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-uv tool install https://github.com/victorhuggomed2006-ux/Echo-AI-Audio-Transcriber/archive/refs/tags/v1.0.0.zip
+uv tool install https://github.com/victorhuggomed2006-ux/Echo-AI-Audio-Transcriber/archive/refs/tags/v1.0.1.zip
 echo-ai
 ```
 
@@ -59,7 +59,7 @@ echo-ai
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-uv tool install https://github.com/victorhuggomed2006-ux/Echo-AI-Audio-Transcriber/archive/refs/tags/v1.0.0.zip
+uv tool install https://github.com/victorhuggomed2006-ux/Echo-AI-Audio-Transcriber/archive/refs/tags/v1.0.1.zip
 echo-ai
 ```
 

@@ -7,4 +7,4 @@ import os
 # lá; o download comum grava aos poucos (transcricao.baixar_modelo mede no disco). Quem quiser o Xet põe 0 no ambiente.
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
