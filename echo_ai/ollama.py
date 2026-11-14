@@ -71,6 +71,10 @@ def serve_para_a_conversa(nome: str, familias: list[str], quantos: float | None)
     return quantos is not None and MINIMO_DE_PARAMETROS <= quantos <= MAXIMO_DE_PARAMETROS
 
 
+# O corpo JSON do Ollama: as chaves são conhecidas, os valores variam de um endpoint para outro.
+type Json = dict[str, Any]
+
+
 class OllamaFora(RuntimeError):
     """O Ollama não respondeu (desligado ou ocupado): a conversa avisa na tela; a transcrição continua."""
 
@@ -125,22 +129,25 @@ class Ollama:
             raise OllamaFora(f"o Ollama caiu no meio do download de {nome} ({type(erro).__name__})") from erro
         raise OllamaFora(f"o Ollama parou antes de terminar o download de {nome}")
 
-    def _pedir(self, metodo: str, caminho: str, **opcoes: Any) -> httpx.Response:
+    def _pedir(self, metodo: str, caminho: str, corpo: Json | None = None) -> httpx.Response:
         try:
-            resposta = self._cliente.request(metodo, caminho, **opcoes)
+            resposta = self._cliente.request(metodo, caminho, json=corpo)
         except httpx.HTTPError as erro:
             raise OllamaFora(f"o Ollama não respondeu em {self.url} ({type(erro).__name__})") from erro
         if resposta.status_code >= 400:
             raise OllamaFora(f"o Ollama recusou {caminho}: {resposta.text[:300]}")
         return resposta
 
-    def _json(self, metodo: str, caminho: str, **opcoes: Any) -> Any:
+    def _json(self, metodo: str, caminho: str, corpo: Json | None = None) -> Json:
         """A resposta em JSON; um corpo que não é JSON vira OllamaFora (a tela mostra), não um erro solto."""
-        resposta = self._pedir(metodo, caminho, **opcoes)
+        resposta = self._pedir(metodo, caminho, corpo)
         try:
-            return resposta.json()
+            dados = resposta.json()
         except ValueError as erro:
             raise OllamaFora(f"o Ollama devolveu algo que não é JSON em {caminho}") from erro
+        if not isinstance(dados, dict):
+            raise OllamaFora(f"o Ollama devolveu JSON num formato inesperado em {caminho}")
+        return dados
 
     def modelos(self) -> list[dict[str, Any]]:
         """Os modelos instalados que servem para a conversa sobre os áudios (serve_para_a_conversa)."""
@@ -184,7 +191,7 @@ class Ollama:
     def vetores(self, modelo: str, textos: list[str]) -> list[list[float]] | None:
         """Os vetores de significado; None se o Ollama não está de pé (quem chama segue sem eles e avisa)."""
         try:
-            dados = self._json("POST", "/api/embed", json={"model": modelo, "input": textos})
+            dados = self._json("POST", "/api/embed", corpo={"model": modelo, "input": textos})
         except OllamaFora as erro:
             log.warning("sem vetores: %s", erro)
             return None
@@ -200,7 +207,7 @@ class Ollama:
         try:
             carregados = self._json("GET", "/api/ps").get("models", [])
             for m in carregados:
-                self._pedir("POST", "/api/generate", json={"model": m["name"], "keep_alive": 0})
+                self._pedir("POST", "/api/generate", corpo={"model": m["name"], "keep_alive": 0})
                 log.info("Ollama liberou %s da placa", m["name"])
         except OllamaFora as erro:
             log.warning("não consegui liberar o Ollama da placa: %s", erro)

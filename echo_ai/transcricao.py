@@ -12,13 +12,20 @@ import logging
 import queue
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from echo_ai.banco import Banco
 from echo_ai.hardware import CPU, PLACA, PRECISAO_DA_CPU
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
+
+    # o áudio já decodificado em 16 kHz: um array do numpy de verdade, ou uma lista nos testes
+    type Amostras = Sequence[float] | NDArray[np.float32]
 
 log = logging.getLogger("echo")
 SINAIS_DE_ERRO_DA_PLACA = ("cuda", "cublas", "cudnn", "gpu", "out of memory")
@@ -91,7 +98,8 @@ def repositorio_do_modelo(nome: str) -> str:
     """O repositório do Hugging Face de onde o faster-whisper baixa o modelo."""
     from faster_whisper.utils import _MODELS  # o mapa do próprio faster-whisper: é ele que decide de onde baixa
 
-    return _MODELS[nome]
+    repositorio: str = _MODELS[nome]
+    return repositorio
 
 
 ARQUIVOS_ESSENCIAIS = (
@@ -125,17 +133,20 @@ class Trecho(Protocol):
 class Motor(Protocol):
     """O que a fila precisa de um modelo de transcrição (o WhisperModel real, ou um falso nos testes)."""
 
-    def transcribe(self, audio: str, **opcoes: Any) -> tuple[Iterable[Trecho], Any]: ...
+    def transcribe(
+        self, audio: "Amostras", *, language: str | None = None, vad_filter: bool = False, beam_size: int = 5
+    ) -> tuple[Iterable[Trecho], Any]: ...
 
 
 CarregarMotor = Callable[[str, str, str], Motor]
-Decodificar = Callable[[str], Any]  # caminho -> amostras em 16 kHz (numpy), ou lista nos testes
+Decodificar = Callable[[str], "Amostras"]  # caminho -> amostras em 16 kHz
 
 
-def decodificar_audio(caminho: str) -> Any:
+def decodificar_audio(caminho: str) -> "Amostras":
     from faster_whisper.audio import decode_audio
 
-    return decode_audio(caminho, sampling_rate=TAXA_DO_WHISPER)
+    amostras: Amostras = decode_audio(caminho, sampling_rate=TAXA_DO_WHISPER)
+    return amostras
 
 
 def tem_audio(caminho: str) -> bool:
@@ -155,7 +166,7 @@ def tem_audio(caminho: str) -> bool:
         recipiente.close()
 
 
-def contorno(amostras: Any, barras: int = BARRAS_DA_ONDA) -> list[float]:
+def contorno(amostras: "Amostras", barras: int = BARRAS_DA_ONDA) -> list[float]:
     """Os picos do áudio em `barras` fatias, de 0 a 1 (o maior pico vira 1). Áudio vazio = lista vazia."""
     total = len(amostras)
     if not total:
@@ -222,10 +233,13 @@ def carregar_whisper(nome: str, dispositivo: str, precisao: str, pastas_extras: 
 
     if dispositivo == PLACA:
         preparar_bibliotecas_da_placa(pastas_extras)
+    modelo: Motor  # declarado uma vez, com o tipo que a função promete; os dois caminhos abaixo preenchem
     incluido = modelo_incluido(nome)
     if incluido:
-        return WhisperModel(str(incluido), device=dispositivo, compute_type=precisao, local_files_only=True)
-    return WhisperModel(nome, device=dispositivo, compute_type=precisao, local_files_only=True, revision=REVISAO[nome])
+        modelo = WhisperModel(str(incluido), device=dispositivo, compute_type=precisao, local_files_only=True)
+    else:
+        modelo = WhisperModel(nome, device=dispositivo, compute_type=precisao, local_files_only=True, revision=REVISAO[nome])
+    return modelo
 
 
 def _bytes_na_pasta(pasta: Path) -> int:
@@ -341,7 +355,7 @@ class Placa:
 
     def liberar_se_parada(self) -> bool:
         with self._trava:
-            if self._motor is not None and time.monotonic() - self._ultimo_uso > self.minutos_parada * 60:
+            if self._motor is not None and time.monotonic() - self._ultimo_uso >= self.minutos_parada * 60:
                 self._liberar_sem_trava()
                 return True
         return False

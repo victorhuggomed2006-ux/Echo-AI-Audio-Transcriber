@@ -1,10 +1,18 @@
-# pre-commit install  (roda antes de cada commit: Ruff, gitleaks e Bandit)
+# pre-commit install  (roda antes de cada commit: Ruff, mypy estrito, gitleaks e Bandit)
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.9
     hooks:
       - id: ruff
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: mypy-estrito
+        name: mypy --strict (tipos obrigatórios)
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
+        types: [python]
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.28.0
     hooks:

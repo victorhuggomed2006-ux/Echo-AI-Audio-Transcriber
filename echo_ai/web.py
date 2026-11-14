@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 from echo_ai import __version__, hardware, memoria
 from echo_ai.aceleracao import Aceleracao
@@ -67,7 +68,7 @@ class ProtecaoLocal(BaseHTTPMiddleware):
     """Contra DNS rebinding (Host tem de ser o nosso) e contra outro site mandando comando (Origin e cabeçalho próprio,
     que um formulário de outro site não consegue pôr sem passar pelo CORS, que aqui não existe)."""
 
-    def __init__(self, app: Any, porta: int) -> None:
+    def __init__(self, app: ASGIApp, porta: int) -> None:
         super().__init__(app)
         self.hosts = {f"127.0.0.1:{porta}", f"localhost:{porta}"}
         self.origens = {"http://" + h for h in self.hosts}

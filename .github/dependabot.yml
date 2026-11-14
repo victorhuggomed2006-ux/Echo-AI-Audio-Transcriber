@@ -4,6 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # o av 16 ou mais quebra o faster-whisper (testado com o 19.0.2); reabrir quando o faster-whisper acompanhar
+      - dependency-name: "av"
+        versions: [">=16"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import math
+import os
 import queue
 import sqlite3
 import struct
@@ -535,16 +536,26 @@ def test_voz_sem_piper_diz_o_motivo(cliente: TestClient) -> None:
     assert r.status_code == 503 and "Piper" in r.json()["erro"]
 
 
-def piper_falsa(pasta: Path, corpo: str) -> Path:
+def programa_falso(pasta: Path, nome: str, codigo: str) -> Path:
+    """Um executável de mentira, igual em Windows, macOS e Linux: o corpo é Python. No Windows um .cmd chama o script."""
+    script = pasta / f"{nome}.py"
+    script.write_text(codigo, encoding="utf-8")
+    if sys.platform == "win32":
+        lancador = pasta / f"{nome}.cmd"
+        lancador.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+        return lancador
+    script.write_text(f"#!{sys.executable}\n" + codigo, encoding="utf-8")
+    script.chmod(0o755)
+    return script
+
+
+def piper_falsa(pasta: Path, codigo: str) -> Path:
     """Um executável no lugar da Piper: o teste roda o subprocess de verdade, só troca o programa chamado."""
-    programa = pasta / "piper"
-    programa.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
-    programa.chmod(0o755)
-    return programa
+    return programa_falso(pasta, "piper", codigo)
 
 
 def test_voz_que_falha_diz_o_motivo_e_nao_deixa_arquivo(tmp_path: Path) -> None:
-    piper = piper_falsa(tmp_path, 'echo "modelo corrompido" >&2\nexit 1\n')
+    piper = piper_falsa(tmp_path, 'import sys\nprint("modelo corrompido", file=sys.stderr)\nsys.exit(1)\n')
     with pytest.raises(FalhaDaVoz, match="modelo corrompido"):
         falar("bom dia", piper, tmp_path, "faber", tmp_path)
     assert list(tmp_path.glob("*.wav")) == []
@@ -553,7 +564,11 @@ def test_voz_que_falha_diz_o_motivo_e_nao_deixa_arquivo(tmp_path: Path) -> None:
 def test_voz_guarda_o_audio_e_nao_gera_duas_vezes(tmp_path: Path) -> None:
     contador = tmp_path / "chamadas"
     piper = piper_falsa(
-        tmp_path, f'while [ "$1" != "--output_file" ]; do shift; done\nprintf RIFF > "$2"\necho x >> "{contador}"\n'
+        tmp_path,
+        "import sys\n"
+        "args = sys.argv[1:]\n"
+        "open(args[args.index('--output_file') + 1], 'wb').write(b'RIFF')\n"
+        f"open({str(contador)!r}, 'a').write('x\\n')\n",
     )
     primeiro = falar("bom dia [1]", piper, tmp_path, "faber", tmp_path)
     segundo = falar("bom dia", piper, tmp_path, "faber", tmp_path)
@@ -1000,14 +1015,13 @@ def nvidia_smi_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O nvidia-smi é programa do sistema (fronteira): um falso no PATH, respondendo como uma placa de 6 GB."""
     pasta = tmp_path / "bin"
     pasta.mkdir()
-    programa = pasta / "nvidia-smi"
-    programa.write_text("#!/bin/sh\necho 'NVIDIA Placa de Teste, 6144'\n", encoding="utf-8")
-    programa.chmod(0o755)
-    monkeypatch.setenv("PATH", str(pasta))
+    programa_falso(pasta, "nvidia-smi", "print('NVIDIA Placa de Teste, 6144')\n")
+    monkeypatch.setenv("PATH", os.pathsep.join([str(pasta), os.path.dirname(sys.executable)]))
     monkeypatch.setattr("ctranslate2.get_cuda_device_count", lambda: 1)
     monkeypatch.setattr("ctranslate2.get_supported_compute_types", lambda dispositivo: {"float16", "int8"})
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="finge ser Linux e usa um nvidia-smi falso que o Windows não acha")
 def test_aceleracao_instalada_passa_a_transcrever_na_placa(
     cliente: TestClient, servicos: Servicos, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1051,6 +1065,7 @@ def motor_empacotado(tmp_path: Path, quebrado_no_meio: bool = False) -> bytes:
     return zstandard.ZstdCompressor().compress(bruto.getvalue())
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="o motor falso é um script sh dentro de um .tar.zst do Linux")
 def test_instalar_ia_sem_motor_instala_o_motor_antes_e_liga_na_porta_propria(
     cliente: TestClient, servicos: Servicos, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

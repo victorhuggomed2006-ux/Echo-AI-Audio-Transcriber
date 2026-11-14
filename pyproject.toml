@@ -1,6 +1,6 @@
 [project]
 name = "echo-ai-audio-transcriber"
-version = "1.0.1"
+version = "1.0.2"
 description = "Local, private audio transcription with an AI assistant. Runs on Windows, macOS and Linux, on the GPU or the CPU."
 readme = "README.md"
 license = "MIT"
@@ -8,6 +8,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Victor Medeiros" }]
 requires-python = ">=3.12"
 dependencies = [
+    # abaixo da 16 de propósito: com o av 19 o faster-whisper quebra (ele ainda passa `metadata_errors` ao abrir o áudio)
     "av>=14,<16",
     "fastapi>=0.142.0",
     "faster-whisper>=1.2.1",
@@ -49,17 +50,17 @@ line-length = 130
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "S"]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ANN"]  # ANN: toda função precisa de tipos nos parâmetros e no retorno
 ignore = ["S101", "S603"]      # assert nos testes; subprocess da Piper com argumentos fixos (sem shell)
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S"]
+"tests/*" = ["S", "ANN"]  # os testes não precisam de anotação em tudo
 
 [tool.mypy]
 python_version = "3.12"
+files = ["echo_ai"]
+strict = true  # tipos obrigatórios: sem função sem anotação, sem Any solto, sem retorno desconhecido
 ignore_missing_imports = true
-warn_unused_ignores = true
-check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -78,7 +79,7 @@ packages = ["echo_ai"]
 [tool.briefcase]
 project_name = "Echo AI Audio Transcriber"
 bundle = "com.github.victorhuggomed2006ux"
-version = "1.0.1"
+version = "1.0.2"
 url = "https://github.com/victorhuggomed2006-ux/Echo-AI-Audio-Transcriber"
 license = "MIT"
 license-files = ["LICENSE"]
