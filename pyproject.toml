@@ -58,7 +58,7 @@ ignore = ["S101", "S603"]      # assert nos testes; subprocess da Piper com argu
 
 [tool.mypy]
 python_version = "3.12"
-files = ["echo_ai"]
+files = ["echo_ai", "tests"]  # o mesmo conjunto que o CI confere
 strict = true  # tipos obrigatórios: sem função sem anotação, sem Any solto, sem retorno desconhecido
 ignore_missing_imports = true
 

@@ -7,6 +7,7 @@ import io
 import json
 import math
 import os
+import platform
 import queue
 import sqlite3
 import struct
@@ -657,8 +658,8 @@ def test_estado_compara_os_modelos_e_marca_o_recomendado_para_a_maquina(cliente:
     ],
 )
 def test_o_pacote_do_motor_e_o_do_sistema(monkeypatch: pytest.MonkeyPatch, sistema: str, maquina: str, esperado: str) -> None:
-    monkeypatch.setattr(motor_ia.sys, "platform", sistema)
-    monkeypatch.setattr(motor_ia.platform, "machine", lambda: maquina)
+    monkeypatch.setattr(sys, "platform", sistema)
+    monkeypatch.setattr(platform, "machine", lambda: maquina)
     assert motor_ia.pacote_do_sistema() == esperado
 
 
@@ -725,8 +726,8 @@ def pypi_falso(tmp_path: Path, adulterar: bool = False) -> httpx.Client:
 
 
 def test_aceleracao_baixa_confere_e_extrai_so_as_bibliotecas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(aceleracao.sys, "platform", "linux")
-    monkeypatch.setattr(aceleracao.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
     pasta = tmp_path / "aceleracao"
     andamento: list[tuple[int, int]] = []
     Aceleracao(pasta, cliente=pypi_falso(tmp_path)).instalar(lambda b, t: andamento.append((b, t)))
@@ -736,8 +737,8 @@ def test_aceleracao_baixa_confere_e_extrai_so_as_bibliotecas(tmp_path: Path, mon
 
 
 def test_aceleracao_que_nao_confere_com_o_pypi_e_recusada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(aceleracao.sys, "platform", "linux")
-    monkeypatch.setattr(aceleracao.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
     pasta = tmp_path / "aceleracao"
     with pytest.raises(ValueError, match="não confere"):
         Aceleracao(pasta, cliente=pypi_falso(tmp_path, adulterar=True)).instalar(lambda b, t: None)
@@ -745,7 +746,7 @@ def test_aceleracao_que_nao_confere_com_o_pypi_e_recusada(tmp_path: Path, monkey
 
 
 def test_mac_nao_tem_pacote_de_aceleracao(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(aceleracao.sys, "platform", "darwin")
+    monkeypatch.setattr(sys, "platform", "darwin")
     with pytest.raises(ValueError, match="CPU"):
         Aceleracao(tmp_path, cliente=pypi_falso(tmp_path)).instalar(lambda b, t: None)
 
@@ -964,8 +965,8 @@ def test_pacote_do_motor_que_cai_no_meio_nao_deixa_parcial_nem_motor(tmp_path: P
 
 
 def test_aceleracao_que_cai_no_segundo_pacote_nao_fica_instalada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(aceleracao.sys, "platform", "linux")
-    monkeypatch.setattr(aceleracao.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
     bom = pypi_falso(tmp_path)
 
     def quebra_no_cudnn(pedido: httpx.Request) -> httpx.Response:
@@ -980,7 +981,7 @@ def test_aceleracao_que_cai_no_segundo_pacote_nao_fica_instalada(tmp_path: Path,
 
 
 def test_wheel_que_tenta_gravar_fora_da_pasta_e_recusado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(aceleracao.sys, "platform", "linux")
+    monkeypatch.setattr(sys, "platform", "linux")
     wheel = wheel_falso(tmp_path, "mau.whl", ["nvidia/x/lib/../../../../fora.so"])
     with pytest.raises(ValueError, match="fora da pasta"):
         Aceleracao(tmp_path / "aceleracao")._extrair_bibliotecas(wheel)
@@ -1025,8 +1026,8 @@ def nvidia_smi_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 def test_aceleracao_instalada_passa_a_transcrever_na_placa(
     cliente: TestClient, servicos: Servicos, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(aceleracao.sys, "platform", "linux")
-    monkeypatch.setattr(aceleracao.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
     nvidia_smi_falso(tmp_path, monkeypatch)
     sem_o_pacote_nvidia(monkeypatch)  # como no app instalado: só o pacote baixado pela tela liga a placa
     servicos.maquina = replace(MAQUINA_DE_TESTE, aceleracao_pendente=True)
@@ -1069,8 +1070,8 @@ def motor_empacotado(tmp_path: Path, quebrado_no_meio: bool = False) -> bytes:
 def test_instalar_ia_sem_motor_instala_o_motor_antes_e_liga_na_porta_propria(
     cliente: TestClient, servicos: Servicos, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(motor_ia.sys, "platform", "linux")
-    monkeypatch.setattr(motor_ia.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
     pacote = motor_empacotado(tmp_path)
     marca = tmp_path / "motor" / "marca"
 
@@ -1381,8 +1382,8 @@ def test_modelo_sem_o_tokenizer_nao_conta_como_baixado(monkeypatch: pytest.Monke
 
 
 def test_pacote_do_motor_que_quebra_no_meio_nao_deixa_motor_pela_metade(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(motor_ia.sys, "platform", "linux")
-    monkeypatch.setattr(motor_ia.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
     pacote = motor_empacotado(tmp_path, quebrado_no_meio=True)
 
     def rede(pedido: httpx.Request) -> httpx.Response:
