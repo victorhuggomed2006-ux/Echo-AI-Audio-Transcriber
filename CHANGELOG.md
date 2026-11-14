@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Settings now let you choose which microphone the app records with (or the system default). If the chosen microphone is unplugged, the app says so and records with the default one.
+
 ## 1.0.2
 
 Maintenance and interface update.
