@@ -839,7 +839,13 @@
     linha(t('maquina.ram'), numero(m.ram_gb) + ' GB');
     linha(t('maquina.placa'), m.placa ? m.placa + (m.vram_gb ? ' · ' + numero(m.vram_gb) + ' GB' : '') : t('maquina.sem.placa'));
     linha(t('maquina.usando'), m.dispositivo === 'cuda' ? t('placa') : t('cpu'));
+    (m.gpus || []).forEach((g) => linha(t('maquina.gpu'), g.nome + (g.memoria_gb ? ' · ' + numero(g.memoria_gb) + ' GB' : '') + ' · ' + t(g.integrada ? 'maquina.gpu.integrada' : 'maquina.gpu.dedicada')));
     maq.appendChild(ficha);
+    const gp = m.gpu_principal;
+    if (gp && gp.fabricante !== 'nvidia' && m.dispositivo !== 'cuda') {
+      const marca = { amd: 'AMD', intel: 'Intel' }[gp.fabricante];
+      maq.appendChild(el('p', 'apagado', marca ? t('maquina.gpu.cpu', { gpu: gp.nome, marca }) : t('maquina.gpu.cpu.outra', { gpu: gp.nome })));
+    }
     if (m.placa_sem_driver) maq.appendChild(el('p', 'alerta', t('maquina.sem.driver')));
     const acel = avisoDeAceleracao(); if (acel) maq.appendChild(acel);
     maq.id = 'ajustes-maquina';

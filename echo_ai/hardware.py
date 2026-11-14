@@ -2,8 +2,9 @@
 
 A regra: placa NVIDIA com driver funcionando = transcreve na placa (float16); qualquer outra coisa = transcreve na CPU
 (int8), que roda em todo computador, só mais devagar. Placa de outra marca, e o Mac, usam a CPU: o motor do whisper
-(CTranslate2) só acelera em NVIDIA. O driver da NVIDIA o app não instala (é do fabricante e pede administrador): sem
-ele, a tela diz que a placa existe e que instalar o driver deixa a transcrição mais rápida.
+(CTranslate2) só acelera em NVIDIA. As placas AMD e Intel (integradas ou não) são reconhecidas (echo_ai.gpus) e mostradas
+na tela, mas a transcrição nelas ainda roda na CPU. O driver da NVIDIA o app não instala (é do fabricante e pede
+administrador): sem ele, a tela diz que a placa existe e que instalar o driver deixa a transcrição mais rápida.
 
 As recomendações de modelo saem da memória: o whisper que cabe na placa ou na RAM, e a IA de 1 a 8 bilhões que cabe.
 """
@@ -13,11 +14,13 @@ import platform
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.machinery import ModuleSpec
 from pathlib import Path
 
 import psutil
+
+from echo_ai.gpus import DetectorDeGpus, Fabricante, Gpu, principal
 
 log = logging.getLogger("echo")
 
@@ -46,6 +49,8 @@ class Maquina:
     whisper_recomendado: str
     ia_recomendada: str
     nvidia_detectada: str | None = field(default=None)  # o nome da placa, mesmo quando ela ainda não está em uso
+    gpus: tuple[Gpu, ...] = field(default=())  # todas as placas de vídeo achadas (NVIDIA, AMD, Intel...), em uso ou não
+    gpu_em_uso: Gpu | None = field(default=None)  # a placa em que a transcrição roda; None = CPU
 
     def para_a_tela(self) -> dict[str, object]:
         return {
@@ -60,6 +65,9 @@ class Maquina:
             "dispositivo": self.dispositivo,
             "whisper_recomendado": self.whisper_recomendado,
             "ia_recomendada": self.ia_recomendada,
+            "gpus": [g.para_a_tela() for g in self.gpus],
+            "gpu_em_uso": self.gpu_em_uso.para_a_tela() if self.gpu_em_uso else None,
+            "gpu_principal": gpu.para_a_tela() if (gpu := principal(self.gpus)) else None,
         }
 
 
@@ -146,9 +154,32 @@ def _bibliotecas_da_cuda_presentes(pasta_da_aceleracao: Path) -> bool:
     return especificacao_do_pacote("nvidia.cublas") is not None or aceleracao.instalada(pasta_da_aceleracao)
 
 
-def detectar(pasta_da_aceleracao: Path) -> Maquina:
+def _parecidas(a: str, b: str) -> bool:
+    a, b = a.casefold(), b.casefold()
+    return a in b or b in a
+
+
+def _juntar_com_o_nvidia_smi(gpus: tuple[Gpu, ...], nome: str | None, vram_gb: float | None) -> tuple[Gpu, ...]:
+    """O nvidia-smi sabe a memória certa (o Windows trava em 4 GB) e o nome completo: ele vale mais para a placa NVIDIA.
+    Se a lista do sistema não trouxe a placa, ela entra pelo nvidia-smi."""
+    if nome is None:
+        return gpus
+    achou = False
+    juntas = []
+    for gpu in gpus:
+        if not achou and gpu.fabricante is Fabricante.NVIDIA and _parecidas(gpu.nome, nome):
+            achou = True
+            gpu = replace(gpu, nome=nome, memoria_gb=vram_gb or gpu.memoria_gb)
+        juntas.append(gpu)
+    if not achou:
+        juntas.append(Gpu(Fabricante.NVIDIA, nome, vram_gb, False))
+    return tuple(juntas)
+
+
+def detectar(pasta_da_aceleracao: Path, detector_de_gpus: DetectorDeGpus | None = None) -> Maquina:
     ram_gb = psutil.virtual_memory().total / GB
     nome, vram_gb = _placa_nvidia()
+    gpus = _juntar_com_o_nvidia_smi((detector_de_gpus or DetectorDeGpus()).detectar(), nome, vram_gb)
     driver_ok = nome is not None and _cuda_funciona()
     bibliotecas = _bibliotecas_da_cuda_presentes(pasta_da_aceleracao)
     na_placa = driver_ok and bibliotecas
@@ -165,6 +196,10 @@ def detectar(pasta_da_aceleracao: Path) -> Maquina:
         whisper_recomendado=recomendar_whisper(dispositivo, vram_gb if na_placa else None),
         ia_recomendada=recomendar_ia(ram_gb, vram_gb if na_placa else None),
         nvidia_detectada=nome if driver_ok else None,
+        gpus=gpus,
+        gpu_em_uso=next((g for g in gpus if g.fabricante is Fabricante.NVIDIA and nome and _parecidas(g.nome, nome)), None)
+        if na_placa
+        else None,
     )
     log.info("máquina: %s", maquina.para_a_tela())
     return maquina
