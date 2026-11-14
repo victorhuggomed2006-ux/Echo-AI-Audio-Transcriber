@@ -54,7 +54,16 @@ PASTA = Path(__file__).parent
 EXTENSAO_GUARDAVEL = re.compile(r"\.[a-z0-9]{1,8}")
 PEDACO_DO_UPLOAD = 1024 * 1024
 BATIDA_DO_EVENTO_S = 15
-AJUSTES_ACEITOS = {"whisper_modelo", "idioma", "ollama_modelo", "responder_em_voz", "voz", "modo_da_pergunta", "idioma_da_tela"}
+AJUSTES_ACEITOS = {
+    "whisper_modelo",
+    "idioma",
+    "ollama_modelo",
+    "responder_em_voz",
+    "voz",
+    "modo_da_pergunta",
+    "idioma_da_tela",
+    "microfone",
+}
 LINGUAS_DA_TELA = {"en", "pt", "es"}
 METODOS_DE_ESCRITA = {"POST", "PUT", "PATCH", "DELETE"}
 CABECALHO_DO_APP = "X-Echo"

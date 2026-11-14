@@ -584,6 +584,11 @@ def test_voz_guarda_o_audio_e_nao_gera_duas_vezes(tmp_path: Path) -> None:
 def test_ajuste_desconhecido_e_recusado(cliente: TestClient) -> None:
     assert cliente.post("/api/ajustes", headers=ESCRITA, json={"cor": "azul"}).status_code == 422
     assert cliente.post("/api/ajustes", headers=ESCRITA, json={"whisper_modelo": "small"}).json()["whisper_modelo"] == "small"
+    # o microfone escolhido (o id do dispositivo que o navegador dá) é guardado como os outros ajustes
+    assert (
+        cliente.post("/api/ajustes", headers=ESCRITA, json={"microfone": "id-do-microfone"}).json()["microfone"]
+        == "id-do-microfone"
+    )
 
 
 def test_apagar_nao_sai_da_pasta_dos_audios(cliente: TestClient, servicos: Servicos, tmp_path: Path) -> None:

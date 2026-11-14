@@ -638,8 +638,14 @@
   async function comecarGravacao() {
     if (gravador) return;
     let fluxo;
-    try { fluxo = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-    catch (erro) { avisar(erro.name === 'NotAllowedError' ? t('microfone.negado') : t('microfone.erro', { erro: erro.message })); return; }
+    const base = { echoCancellation: true, noiseSuppression: true }, escolhido = ajuste('microfone');
+    try {
+      try { fluxo = await navigator.mediaDevices.getUserMedia({ audio: escolhido ? { ...base, deviceId: { exact: escolhido } } : base }); }
+      catch (erro) {
+        if (!escolhido || !['OverconstrainedError', 'NotFoundError'].includes(erro.name)) throw erro;
+        avisar(t('microfone.sumiu')); fluxo = await navigator.mediaDevices.getUserMedia({ audio: base });
+      }
+    } catch (erro) { avisar(erro.name === 'NotAllowedError' ? t('microfone.negado') : t('microfone.erro', { erro: erro.message })); return; }
     const tipo = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4'].find((x) => window.MediaRecorder && MediaRecorder.isTypeSupported(x)) || '';
     const rec = new MediaRecorder(fluxo, tipo ? { mimeType: tipo } : undefined), pedacos = [];
     const contexto = new (window.AudioContext || window.webkitAudioContext)(), analisador = contexto.createAnalyser();
@@ -813,6 +819,42 @@
     lista.forEach(([valor, rotulo]) => { const b = botao(rotulo, 'contorno', () => aoEscolher(valor)); b.setAttribute('aria-pressed', String(valor === atualValor)); l.appendChild(b); });
     return l;
   }
+  /* ─────────── escolha do microfone ─────────── */
+  async function microfonesDisponiveis() {
+    try { return (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput' && d.deviceId); }
+    catch (erro) { return []; }
+  }
+  function secaoDoMicrofone() {
+    const s = secao(t('ajustes.microfone'), t('ajustes.microfone.texto'));
+    s.id = 'ajustes-microfone';
+    const preencher = async () => {
+      const lista = await microfonesDisponiveis();
+      s.querySelectorAll('select, .apagado:not(:first-of-type), .opcoes-linha').forEach((x) => x.remove());
+      if (!lista.length) { s.appendChild(el('p', 'apagado', t('microfone.nenhum'))); return; }
+      const sel = el('select', 'bt'); sel.setAttribute('aria-label', t('ajustes.microfone'));
+      const padrao = el('option', null, t('microfone.padrao')); padrao.value = ''; sel.appendChild(padrao);
+      lista.forEach((d, i) => { const o = el('option', null, d.label || t('microfone.sem.nome', { n: i + 1 })); o.value = d.deviceId; sel.appendChild(o); });
+      sel.value = lista.some((d) => d.deviceId === ajuste('microfone')) ? ajuste('microfone') : '';
+      sel.addEventListener('change', () => gravarAjuste('microfone', sel.value));
+      s.appendChild(sel);
+      if (lista.some((d) => !d.label)) {
+        /* o navegador só mostra os nomes depois de o app ter pedido o microfone uma vez */
+        const l = el('div', 'opcoes-linha');
+        l.appendChild(botao(t('microfone.mostrar'), 'contorno', async () => {
+          try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((x) => x.stop()); }
+          catch (erro) { avisar(erro.name === 'NotAllowedError' ? t('microfone.negado') : t('microfone.erro', { erro: erro.message })); return; }
+          preencher();
+        }));
+        s.appendChild(l);
+      }
+    };
+    preencher();
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+      const atualizar = () => { if (s.isConnected) preencher(); else navigator.mediaDevices.removeEventListener('devicechange', atualizar); };
+      navigator.mediaDevices.addEventListener('devicechange', atualizar);
+    }
+    return s;
+  }
   function montarAjustes() {
     const corpo = limpar($('corpo-ajustes'));
     const ling = secao(t('ajustes.lingua'));
@@ -822,6 +864,7 @@
     const escuro = document.documentElement.classList.contains('escuro');
     tema.appendChild(opcoes([['escuro', t('tema.escuro')], ['claro', t('tema.claro')]], escuro ? 'escuro' : 'claro', (v) => { aplicarTema(v === 'escuro', true); montarAjustes(); }));
     corpo.appendChild(tema);
+    corpo.appendChild(secaoDoMicrofone());
     const w = secao(t('ajustes.whisper'), t('ajustes.whisper.texto')), gw = el('div', 'grade-modelos');
     const wEscolhido = whisperEscolhido();
     estado.modelos_whisper.forEach((m) => gw.appendChild(cartaoDeModelo('whisper', m, wEscolhido && wEscolhido.nome === m.nome)));
