@@ -538,16 +538,20 @@ def test_voz_sem_piper_diz_o_motivo(cliente: TestClient) -> None:
 
 
 def programa_falso(pasta: Path, nome: str, codigo: str) -> Path:
-    """Um executável de mentira, igual em Windows, macOS e Linux: o corpo é Python. No Windows um .cmd chama o script."""
-    script = pasta / f"{nome}.py"
-    script.write_text(codigo, encoding="utf-8")
+    """Um executável de mentira, igual em Windows, macOS e Linux: o corpo é Python.
+
+    No Windows vira `nome.cmd` chamando um script; nos outros sistemas é um arquivo chamado exatamente `nome`, com
+    shebang (o `shutil.which` só acha o programa pelo nome exato)."""
     if sys.platform == "win32":
+        script = pasta / f"{nome}.py"
+        script.write_text(codigo, encoding="utf-8")
         lancador = pasta / f"{nome}.cmd"
         lancador.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
         return lancador
-    script.write_text(f"#!{sys.executable}\n" + codigo, encoding="utf-8")
-    script.chmod(0o755)
-    return script
+    programa = pasta / nome
+    programa.write_text(f"#!{sys.executable}\n" + codigo, encoding="utf-8")
+    programa.chmod(0o755)
+    return programa
 
 
 def piper_falsa(pasta: Path, codigo: str) -> Path:
