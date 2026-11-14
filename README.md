@@ -83,7 +83,8 @@ echo-ai
 **NVIDIA acceleration.** The installers are kept small, so the CUDA libraries (about 1.4 GB) are not inside. When
 Echo-AI finds an NVIDIA card with a working driver, it offers to download the official NVIDIA packages from PyPI,
 checks them against the published SHA-256 checksum, and switches transcription to the GPU without a restart. Other
-graphics cards and Macs transcribe on the CPU (CTranslate2 accelerates only NVIDIA).
+graphics cards and Macs transcribe on the CPU (CTranslate2 accelerates only NVIDIA). Echo-AI still recognizes AMD and Intel
+cards (integrated or dedicated) on Windows, Linux and macOS, and Settings shows what it found and what it will use.
 
 **The AI engine.** If Ollama is not installed, the first time you install an AI Echo-AI downloads the official Ollama
 package for your system (a pinned version, checked against Ollama's published SHA-256), unpacks it in its own data
