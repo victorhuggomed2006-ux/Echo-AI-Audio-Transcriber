@@ -332,7 +332,7 @@ def test_maquina_com_so_amd_reconhece_a_placa_e_transcreve_na_cpu(monkeypatch: p
     tela = maquina.para_a_tela()
     assert tela["gpus"] == [{"fabricante": "amd", "nome": "AMD Radeon RX 6600", "memoria_gb": 8.0, "integrada": False}]
     assert tela["gpu_em_uso"] is None
-    assert tela["gpu_principal"] == tela["gpus"][0]  # type: ignore[index]
+    assert tela["gpu_principal"] == tela["gpus"][0]
     assert tela["placa"] is None and tela["dispositivo"] == "cpu"  # o que já existia segue igual
 
 

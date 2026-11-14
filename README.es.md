@@ -85,7 +85,7 @@ echo-ai
 **Aceleración NVIDIA.** Los instaladores son ligeros, así que las bibliotecas CUDA (unos 1,4 GB) no vienen incluidas.
 Cuando Echo-AI encuentra una tarjeta NVIDIA con el driver funcionando, ofrece descargar los paquetes oficiales de NVIDIA
 desde PyPI, los verifica con la suma SHA-256 publicada y pasa a transcribir en la tarjeta sin reiniciar. Otras tarjetas
-y los Mac transcriben en la CPU (CTranslate2 solo acelera NVIDIA).
+y los Mac transcriben en la CPU (CTranslate2 solo acelera NVIDIA). Echo-AI sigue reconociendo tarjetas AMD e Intel (integradas o dedicadas) en Windows, Linux y macOS, y Ajustes muestra lo que encontró y lo que va a usar.
 
 **El motor de IA.** Si Ollama no está instalado, la primera vez que instales una IA Echo-AI descarga el paquete oficial
 de Ollama para tu sistema (una versión fija, verificada con la SHA-256 publicada por Ollama), lo extrae en su carpeta de

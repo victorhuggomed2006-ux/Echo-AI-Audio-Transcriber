@@ -2,8 +2,10 @@
 
 ## 1.0.2
 
-Maintenance update. No changes to features.
+Maintenance and interface update.
 
+- New look for the interface: one consistent set of design tokens, a violet accent, tighter corners, clearer states (transcribing, ready, failed) and better dark and light themes; touch targets of 44 px on small screens.
+- Settings now list the graphics cards found (NVIDIA, AMD and Intel, integrated or dedicated, on Windows, Linux and macOS) and say what the app will use. Transcription still accelerates only on NVIDIA; the notes on AMD and Intel are in `docs/aceleracao-amd.md`.
 - Updated dependencies: FastAPI 0.162, pydantic-settings 2.16.2, pytest 9.2, mypy 2.4.1 and the optional NVIDIA cuBLAS and cuDNN packages.
 - `av` stays below version 16 on purpose: version 19 removes an argument that faster-whisper still passes when it opens an audio file, which breaks transcription (found while testing the update). Dependabot is set to ignore it until faster-whisper catches up.
 - The code now passes `mypy --strict`, and ruff requires a type annotation on every function.
